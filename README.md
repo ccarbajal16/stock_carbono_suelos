@@ -1,2 +1,2 @@
-# stock_carbono_suelos
+# Stock de Carbono en los Suelos
 Modelación geoestadística del stock de carbono en diferentes sistemas agroecológicos
