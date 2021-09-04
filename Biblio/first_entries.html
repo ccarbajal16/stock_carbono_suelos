@@ -1,0 +1,576 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>JabRef references</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script type="text/javascript">
+<!--
+// QuickSearch script for JabRef HTML export (no Abstract/BibTeX)
+// Version: 3.0
+//
+// Copyright (c) 2006-2011, Mark Schenk
+//
+// This software is distributed under a Creative Commons Attribution 3.0 License
+// http://creativecommons.org/licenses/by/3.0/
+//
+// Features:
+// - intuitive find-as-you-type searching
+//    ~ case insensitive
+//    ~ ignore diacritics (optional)
+//
+// - search with/without Regular Expressions
+// - match BibTeX key
+//
+
+// Search settings
+var noSquiggles = true; 	// ignore diacritics when searching
+var searchRegExp = false; 	// enable RegExp searches
+
+
+if (window.addEventListener) {
+	window.addEventListener("load",initSearch,false); }
+else if (window.attachEvent) {
+	window.attachEvent("onload", initSearch); }
+
+function initSearch() {
+	// check for quick search table and searchfield
+	if (!document.getElementById('qs_table')||!document.getElementById('quicksearch')) { return; }
+
+	// load all the rows and sort into arrays
+	loadTableData();
+	
+	//find the query field
+	qsfield = document.getElementById('qs_field');
+
+	// previous search term; used for speed optimisation
+	prevSearch = '';
+
+	//find statistics location
+	stats = document.getElementById('stat');
+	setStatistics(-1);
+	
+	// set up preferences
+	initPreferences();
+
+	// shows the searchfield
+	document.getElementById('quicksearch').style.display = 'block';
+	document.getElementById('qs_field').onkeyup = quickSearch;
+}
+
+function loadTableData() {
+	// find table and appropriate rows
+	searchTable = document.getElementById('qs_table');
+	var allRows = searchTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+	// split all rows into entryRows and infoRows (e.g. abstract, comment, bibtex)
+	entryRows = new Array();
+
+	// get data from each row
+	entryRowsData = new Array();
+	
+	BibTeXKeys = new Array();
+	
+	for (var i=0, k=0, j=0; i<allRows.length;i++) {
+		if (allRows[i].className.match(/entry/)) {
+			entryRows[j] = allRows[i];
+			entryRowsData[j] = stripDiacritics(getTextContent(allRows[i]));
+			allRows[i].id ? BibTeXKeys[j] = allRows[i].id : allRows[i].id = 'autokey_'+j;
+			j ++;
+		}
+	}
+	//number of entries and rows
+	numEntries = entryRows.length;
+}
+
+function quickSearch(){
+	
+	tInput = qsfield;
+
+	if (tInput.value.length == 0) {
+		showAll();
+		setStatistics(-1);
+		qsfield.className = '';
+		return;
+	} else {
+		t = stripDiacritics(tInput.value);
+
+		if(!searchRegExp) { t = escapeRegExp(t); }
+			
+		// only search for valid RegExp
+		try {
+			textRegExp = new RegExp(t,"i");
+			qsfield.className = '';
+		}
+			catch(err) {
+			prevSearch = tInput.value;
+			qsfield.className = 'invalidsearch';
+			return;
+		}
+	}
+	
+	// count number of hits
+	var hits = 0;
+
+	// start looping through all entry rows
+	for (var i = 0; cRow = entryRows[i]; i++){
+
+		// only show search the cells if it isn't already hidden OR if the search term is getting shorter, then search all
+		if(cRow.className.indexOf('noshow')==-1 || tInput.value.length <= prevSearch.length){
+			var found = false; 
+
+			if (entryRowsData[i].search(textRegExp) != -1 || BibTeXKeys[i].search(textRegExp) != -1){ 
+				found = true;
+			}
+			
+			if (found){
+				cRow.className = 'entry show';
+				hits++;
+			} else {
+				cRow.className = 'entry noshow';
+			}
+		}
+	}
+
+	// update statistics
+	setStatistics(hits)
+	
+	// set previous search value
+	prevSearch = tInput.value;
+}
+
+
+// Strip Diacritics from text
+// http://stackoverflow.com/questions/990904/javascript-remove-accents-in-strings
+
+// String containing replacement characters for stripping accents 
+var stripstring = 
+    'AAAAAAACEEEEIIII'+
+    'DNOOOOO.OUUUUY..'+
+    'aaaaaaaceeeeiiii'+
+    'dnooooo.ouuuuy.y'+
+    'AaAaAaCcCcCcCcDd'+
+    'DdEeEeEeEeEeGgGg'+
+    'GgGgHhHhIiIiIiIi'+
+    'IiIiJjKkkLlLlLlL'+
+    'lJlNnNnNnnNnOoOo'+
+    'OoOoRrRrRrSsSsSs'+
+    'SsTtTtTtUuUuUuUu'+
+    'UuUuWwYyYZzZzZz.';
+
+function stripDiacritics(str){
+
+    if(noSquiggles==false){
+        return str;
+    }
+
+    var answer='';
+    for(var i=0;i<str.length;i++){
+        var ch=str[i];
+        var chindex=ch.charCodeAt(0)-192;   // Index of character code in the strip string
+        if(chindex>=0 && chindex<stripstring.length){
+            // Character is within our table, so we can strip the accent...
+            var outch=stripstring.charAt(chindex);
+            // ...unless it was shown as a '.'
+            if(outch!='.')ch=outch;
+        }
+        answer+=ch;
+    }
+    return answer;
+}
+
+// http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+// NOTE: must escape every \ in the export code because of the JabRef Export...
+function escapeRegExp(str) {
+  return str.replace(/[-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
+function setStatistics (hits) {
+	if(hits < 0) { hits=numEntries; }
+	if(stats) { stats.firstChild.data = hits + '/' + numEntries}
+}
+
+function getTextContent(node) {
+	// Function written by Arve Bersvendsen
+	// http://www.virtuelvis.com
+	
+	if (node.nodeType == 3) {
+	return node.nodeValue;
+	} // text node
+	if (node.nodeType == 1 && node.className != "infolinks") { // element node
+	var text = [];
+	for (var chld = node.firstChild;chld;chld=chld.nextSibling) {
+		text.push(getTextContent(chld));
+	}
+	return text.join("");
+	} return ""; // some other node, won't contain text nodes.
+}
+
+function showAll(){
+	for (var i = 0; i < numEntries; i++){ entryRows[i].className = 'entry show'; }
+}
+
+function clearQS() {
+	qsfield.value = '';
+	showAll();
+}
+
+function redoQS(){
+	showAll();
+	quickSearch(qsfield);
+}
+
+function updateSetting(obj){
+	var option = obj.id;
+	var checked = obj.value;
+
+	switch(option)
+	 {
+	 case "opt_useRegExp":
+	   searchRegExp=!searchRegExp;
+	   redoQS();
+	   break;
+	 case "opt_noAccents":
+	   noSquiggles=!noSquiggles;
+	   loadTableData();
+	   redoQS();
+	   break;
+	 }
+}
+
+function initPreferences(){
+	if(noSquiggles){document.getElementById("opt_noAccents").checked = true;}
+	if(searchRegExp){document.getElementById("opt_useRegExp").checked = true;}
+}
+
+function toggleSettings(){
+	var togglebutton = document.getElementById('showsettings');
+	var settings = document.getElementById('settings');
+	
+	if(settings.className == "hidden"){
+		settings.className = "show";
+		togglebutton.innerText = "close settings";
+		togglebutton.textContent = "close settings";
+	}else{
+		settings.className = "hidden";
+		togglebutton.innerText = "settings...";		
+		togglebutton.textContent = "settings...";
+	}
+}
+
+-->
+</script>
+<style type="text/css">
+body { background-color: white; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.2; padding: 1em; color: #2E2E2E; margin: auto 2em; }
+
+form#quicksearch { width: auto; border-style: solid; border-color: gray; border-width: 1px 0px; padding: 0.7em 0.5em; display:none; position:relative; }
+span#searchstat {padding-left: 1em;}
+
+div#settings { margin-top:0.7em; /* border-bottom: 1px transparent solid; background-color: #efefef; border: 1px grey solid; */ }
+div#settings ul {margin: 0; padding: 0; }
+div#settings li {margin: 0; padding: 0 1em 0 0; display: inline; list-style: none; }
+div#settings li + li { border-left: 2px #efefef solid; padding-left: 0.5em;}
+div#settings input { margin-bottom: 0px;}
+
+div#settings.hidden {display:none;}
+
+#showsettings { border: 1px grey solid; padding: 0 0.5em; float:right; line-height: 1.6em; text-align: right; }
+#showsettings:hover { cursor: pointer; }
+
+.invalidsearch { background-color: red; }
+input[type="button"] { background-color: #efefef; border: 1px #2E2E2E solid;}
+
+table { width: 100%; empty-cells: show; border-spacing: 0em 0.2em; margin: 1em 0em; border-style: none; }
+th, td { border: 1px gray solid; border-width: 1px 1px; padding: 0.5em; vertical-align: top; text-align: left; }
+th { background-color: #efefef; }
+td + td, th + th { border-left: none; }
+
+td a { color: navy; text-decoration: none; }
+td a:hover  { text-decoration: underline; }
+
+tr.noshow { display: none;}
+tr.highlight td { background-color: #EFEFEF; border-top: 2px #2E2E2E solid; font-weight: bold; }
+tr.abstract td, tr.comment td, tr.bibtex td { background-color: #EFEFEF; text-align: justify; border-bottom: 2px #2E2E2E solid; }
+tr.nextshow td { border-bottom: 1px gray solid; }
+
+tr.bibtex pre { width: 100%; overflow: auto; white-space: pre-wrap;}
+p.infolinks { margin: 0.3em 0em 0em 0em; padding: 0px; }
+
+@media print {
+	p.infolinks, #qs_settings, #quicksearch, t.bibtex { display: none !important; }
+	tr { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<form action="" id="quicksearch">
+<input type="text" id="qs_field" autocomplete="off" placeholder="Type to search..." /> <input type="button" onclick="clearQS()" value="clear" />
+<span id="searchstat">Matching entries: <span id="stat">0</span></span>
+<div id="showsettings" onclick="toggleSettings()">settings...</div>
+<div id="settings" class="hidden">
+<ul>
+<li><input type="checkbox" class="search_setting" id="opt_useRegExp" onchange="updateSetting(this)"><label for="opt_useRegExp"> use RegExp</label></li>
+<li><input type="checkbox" class="search_setting" id="opt_noAccents" onchange="updateSetting(this)"><label for="opt_noAccents"> ignore accents</label></li>
+</ul>
+</div>
+</form>
+<table id="qs_table" border="1">
+<thead><tr><th width="20%">Author</th><th width="30%">Title</th><th width="5%">Year</th><th width="30%">Journal/Proceedings</th><th width="10%">Reftype</th><th width="5%">DOI/URL</th></tr></thead>
+<tbody><tr id="Angelopoulou2019" class="entry">
+	<td>Angelopoulou, T., Tziolas, N., Balafoutis, A., Zalidis, G. and Bochtis, D.</td>
+	<td>Remote Sensing Techniques for Soil Organic Carbon Estimation: A Review</td>
+	<td>2019</td>
+	<td>Remote Sensing<br/>Vol. 11(6), pp. 676&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.3390/rs11060676">DOI</a> <a href="https://www.mdpi.com/2072-4292/11/6/676">URL</a>&nbsp;</td>
+</tr>
+<tr id="Balkovic2013" class="entry">
+	<td>Balkovi&ccaron;, J., Ra&scaron;ekov&aacute;, Z., Hut&aacute;r, V., Sobock&aacute;, J. and Skalsk&yacute;, R.</td>
+	<td>Digital soil mapping from conventional field soil observations</td>
+	<td>2013</td>
+	<td>Soil and Water Research<br/>Vol. 8(No. 1), pp. 13-25&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.17221/43/2012-swr">DOI</a> <a href="https://primo.qatar-weill.cornell.edu/discovery/fulldisplay/cdi_crossref_primary_10_17221_43_2012_SWR/974WCMCIQ_INST:VU1">URL</a>&nbsp;</td>
+</tr>
+<tr id="Boubehziz2020" class="entry">
+	<td>Boubehziz, S., Khanchoul, K., Benslama, M., Benslama, A., Marchetti, A., Francaviglia, R. and Piccini, C.</td>
+	<td>Predictive mapping of soil organic carbon in Northeast Algeria</td>
+	<td>2020</td>
+	<td>CATENA<br/>Vol. 190, pp. 104539&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.catena.2020.104539">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0341816220300898">URL</a>&nbsp;</td>
+</tr>
+<tr id="Bousbih2019" class="entry">
+	<td>Bousbih, S., Zribi, M., Pelletier, C., Gorrab, A., Lili-Chabaane, Z., Baghdadi, N., Aissa, N.B. and Mougenot, B.</td>
+	<td>Soil Texture Estimation Using Radar and Optical Data from Sentinel-1 and Sentinel-2</td>
+	<td>2019</td>
+	<td>Remote Sensing<br/>Vol. 11(13), pp. 1520&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.3390/rs11131520">DOI</a> <a href="https://www.mdpi.com/2072-4292/11/13/1520">URL</a>&nbsp;</td>
+</tr>
+<tr id="Castaldi2019" class="entry">
+	<td>Castaldi, F., Chabrillat, S., Don, A. and van Wesemael, B.</td>
+	<td>Soil Organic Carbon Mapping Using LUCAS Topsoil Database and Sentinel-2 Data: An Approach to Reduce Soil Moisture and Crop Residue Effects</td>
+	<td>2019</td>
+	<td>Remote Sensing<br/>Vol. 11(18), pp. 2121&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.3390/rs11182121">DOI</a> <a href="https://www.mdpi.com/2072-4292/11/18/2121">URL</a>&nbsp;</td>
+</tr>
+<tr id="Castaldi2019a" class="entry">
+	<td>Castaldi, F., Hueni, A., Chabrillat, S., Ward, K., Buttafuoco, G., Bomans, B., Vreys, K., Brell, M. and van Wesemael, B.</td>
+	<td>Evaluating the capability of the Sentinel 2 data for soil organic carbon prediction in croplands</td>
+	<td>2019</td>
+	<td>ISPRS Journal of Photogrammetry and Remote Sensing<br/>Vol. 147, pp. 267-282&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.isprsjprs.2018.11.026">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0924271618303289">URL</a>&nbsp;</td>
+</tr>
+<tr id="Dalmolin2015" class="entry">
+	<td>Dalmolin, R.S.D. and ten Caten Alexandre</td>
+	<td>Digital mapping: new approach on soil survey</td>
+	<td>2015</td>
+	<td>Investigaci&oacute;n Agraria<br/>Vol. 17(2), pp. 77-86&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.18004/investig.agrar.2015.diciembre.77-86">DOI</a> <a href="http://scielo.iics.una.py/scielo.php?script=sci_arttext&pid=S2305-06832015000200001&lng=es&nrm=iso&tlng=es">URL</a>&nbsp;</td>
+</tr>
+<tr id="Duchesne2021" class="entry">
+	<td>Duchesne, L. and Ouimet, R.</td>
+	<td>Digital mapping of soil texture in ecoforest polygons in Quebec, Canada</td>
+	<td>2021</td>
+	<td>PeerJ<br/>Vol. 9, pp. e11685&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.7717/peerj.11685">DOI</a> <a href="https://peerj.com/articles/11685/">URL</a>&nbsp;</td>
+</tr>
+<tr id="Gao2020" class="entry">
+	<td>Gao, H., Zhang, X., Wang, L., He, X., Shen, F. and Yang, L.</td>
+	<td>Selection of training samples for updating conventional soil map based on spatial neighborhood analysis of environmental covariates</td>
+	<td>2020</td>
+	<td>Geoderma<br/>Vol. 366, pp. 114244&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2020.114244">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0016706119319123">URL</a>&nbsp;</td>
+</tr>
+<tr id="Gomez2019" class="entry">
+	<td>Gomez, C., Dharumarajan, S., F&eacute;ret, J.-B., Lagacherie, P., Ruiz, L. and Sekhar, M.</td>
+	<td>Use of Sentinel-2 Time-Series Images for Classification and Uncertainty Analysis of Inherent Biophysical Property: Case of Soil Texture Mapping</td>
+	<td>2019</td>
+	<td>Remote Sensing<br/>Vol. 11(5), pp. 565&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.3390/rs11050565">DOI</a> <a href="https://www.mdpi.com/2072-4292/11/5/565">URL</a>&nbsp;</td>
+</tr>
+<tr id="Gruijter2016" class="entry">
+	<td>de Gruijter, J., McBratney, A., Minasny, B., Wheeler, I., Malone, B. and Stockmann, U.</td>
+	<td>Farm-scale soil carbon auditing</td>
+	<td>2016</td>
+	<td>Geoderma<br/>Vol. 265, pp. 120-130&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2015.11.010">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0016706115301269">URL</a>&nbsp;</td>
+</tr>
+<tr id="Gruijter2019" class="entry">
+	<td>de Gruijter, J., Wheeler, I. and Malone, B.</td>
+	<td>Using model predictions of soil carbon in farm-scale auditing - A software tool</td>
+	<td>2019</td>
+	<td>Agricultural Systems<br/>Vol. 169, pp. 24-30&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.agsy.2018.11.007">DOI</a> <a href="https://www.sciencedirect.com/science/article/pii/S0308521X18310801">URL</a>&nbsp;</td>
+</tr>
+<tr id="Khaledian2020" class="entry">
+	<td>Khaledian, Y. and Miller, B.A.</td>
+	<td>Selecting appropriate machine learning methods for digital soil mapping</td>
+	<td>2020</td>
+	<td>Applied Mathematical Modelling<br/>Vol. 81, pp. 401-418&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.apm.2019.12.016">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0307904X19307565">URL</a>&nbsp;</td>
+</tr>
+<tr id="Lagacherie2020" class="entry">
+	<td>Lagacherie, P., Arrouays, D., Bourennane, H., Gomez, C. and Nkuba-Kasanda, L.</td>
+	<td>Analysing the impact of soil spatial sampling on the performances of Digital Soil Mapping models and their evaluation: A numerical experiment on Quantile Random Forest using clay contents obtained from Vis-NIR-SWIR hyperspectral imagery</td>
+	<td>2020</td>
+	<td>Geoderma<br/>Vol. 375, pp. 114503&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2020.114503">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0016706119322736">URL</a>&nbsp;</td>
+</tr>
+<tr id="Lai2021" class="entry">
+	<td>Lai, Y.-Q., Wang, H.-L. and Sun, X.-L.</td>
+	<td>A comparison of importance of modelling method and sample size for mapping soil organic matter in Guangdong, China</td>
+	<td>2021</td>
+	<td>Ecological Indicators<br/>Vol. 126, pp. 107618&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.ecolind.2021.107618">DOI</a> <a href="https://www.sciencedirect.com/science/article/pii/S1470160X21002831">URL</a>&nbsp;</td>
+</tr>
+<tr id="Meirvenne2013" class="entry">
+	<td>Meirvenne, M.V., Islam, M.M., Smedt, P.D., Meerschman, E., Vijver, E.V.D. and Saey, T.</td>
+	<td>Key variables for the identification of soil management classes in the aeolian landscapes of north&ndash;west Europe</td>
+	<td>2013</td>
+	<td>Geoderma<br/>Vol. 199, pp. 99-105&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2012.07.017">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S001670611200287X">URL</a>&nbsp;</td>
+</tr>
+<tr id="Padarian2019" class="entry">
+	<td>Padarian, J., Minasny, B. and McBratney, A.B.</td>
+	<td>Using deep learning for digital soil mapping</td>
+	<td>2019</td>
+	<td>SOIL<br/>Vol. 5(1), pp. 79-89&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.5194/soil-5-79-2019">DOI</a> <a href="https://soil.copernicus.org/articles/5/79/2019/">URL</a>&nbsp;</td>
+</tr>
+<tr id="Padarian2020" class="entry">
+	<td>Padarian, J., Minasny, B. and McBratney, A.B.</td>
+	<td>Machine learning and soil sciences: a review aided by machine learning tools</td>
+	<td>2020</td>
+	<td>SOIL<br/>Vol. 6(1), pp. 35-52&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.5194/soil-6-35-2020">DOI</a> <a href="https://soil.copernicus.org/articles/6/35/2020/">URL</a>&nbsp;</td>
+</tr>
+<tr id="SamuelRosa2015" class="entry">
+	<td>Samuel-Rosa, A., Heuvelink, G., Vasques, G. and Anjos, L.</td>
+	<td>Do more detailed environmental covariates deliver more accurate soil maps?</td>
+	<td>2015</td>
+	<td>Geoderma<br/>Vol. 243-244, pp. 214-227&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2014.12.017">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S001670611400456X">URL</a>&nbsp;</td>
+</tr>
+<tr id="Schillaci2017" class="entry">
+	<td>Schillaci, C., Lombardo, L., Saia, S., Fantappi&egrave;, M., Märker, M. and Acutis, M.</td>
+	<td>Modelling the topsoil carbon stock of agricultural lands with the Stochastic Gradient Treeboost in a semi-arid Mediterranean region</td>
+	<td>2017</td>
+	<td>Geoderma<br/>Vol. 286, pp. 35-45&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2016.10.019">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0016706116306358">URL</a>&nbsp;</td>
+</tr>
+<tr id="Shahriari2019" class="entry">
+	<td>Shahriari, M., Delbari, M., Afrasiab, P. and Pahlavan-Rad, M.R.</td>
+	<td>Predicting regional spatial distribution of soil texture in floodplains using remote sensing data: A case of southeastern Iran</td>
+	<td>2019</td>
+	<td>CATENA<br/>Vol. 182, pp. 104149&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.catena.2019.104149">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0341816219302917">URL</a>&nbsp;</td>
+</tr>
+<tr id="Stumpf2017" class="entry">
+	<td>Stumpf, F., Schmidt, K., Goebes, P., Behrens, T., Schönbrodt-Stitt, S., Wadoux, A., Xiang, W. and Scholten, T.</td>
+	<td>Uncertainty-guided sampling to improve digital soil maps</td>
+	<td>2017</td>
+	<td>CATENA<br/>Vol. 153, pp. 30-38&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.catena.2017.01.033">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0341816217300401">URL</a>&nbsp;</td>
+</tr>
+<tr id="Sun2017" class="entry">
+	<td>Sun, X.-L., Wang, H.-L., Zhao, Y.-G., Zhang, C. and Zhang, G.-L.</td>
+	<td>Digital soil mapping based on wavelet decomposed components of environmental covariates</td>
+	<td>2017</td>
+	<td>Geoderma<br/>Vol. 303, pp. 118-132&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2017.05.017">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0016706117307292">URL</a>&nbsp;</td>
+</tr>
+<tr id="Szakacs2011" class="entry">
+	<td>Szak&aacute;cs, G.G.J., Cerri, C.C., Herpin, U. and Bernoux, M.</td>
+	<td>Assessing soil carbon stocks under pastures through orbital remote sensing</td>
+	<td>2011</td>
+	<td>Scientia Agricola<br/>Vol. 68(5), pp. 574-581&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1590/s0103-90162011000500010">DOI</a> <a href="https://www.scielo.br/j/sa/a/g4Dyv9qKZLzM6KTk3RZKXCw/?lang=en#">URL</a>&nbsp;</td>
+</tr>
+<tr id="TaghizadehMehrjardi2016" class="entry">
+	<td>Taghizadeh-Mehrjardi, R., Nabiollahi, K. and Kerry, R.</td>
+	<td>Digital mapping of soil organic carbon at multiple depths using different data mining techniques in Baneh region, Iran</td>
+	<td>2016</td>
+	<td>Geoderma<br/>Vol. 266, pp. 98-110&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2015.12.003">DOI</a> <a href="https://www.sciencedirect.com/science/article/abs/pii/S0016706115301543">URL</a>&nbsp;</td>
+</tr>
+<tr id="Tubio2017" class="entry">
+	<td>Tubío, M.R.</td>
+	<td>Modelling of the topsoil organic carbon content by analysing the potential of spectroscopic techniques for digital soil mapping</td>
+	<td>2017</td>
+	<td>&nbsp;</td>
+	<td>thesis</td>
+	<td><a href="http://hdl.handle.net/10347/16135">URL</a>&nbsp;</td>
+</tr>
+<tr id="Vaudour2019" class="entry">
+	<td>Vaudour, E., Gomez, C., Fouad, Y. and Lagacherie, P.</td>
+	<td>Sentinel-2 image capacities to predict common topsoil properties of temperate and Mediterranean agroecosystems</td>
+	<td>2019</td>
+	<td>Remote Sensing of Environment<br/>Vol. 223, pp. 21-33&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.rse.2019.01.006">DOI</a> <a href="https://www.sciencedirect.com/science/article/pii/S0034425719300069">URL</a>&nbsp;</td>
+</tr>
+<tr id="Wadoux2019" class="entry">
+	<td>Wadoux, A.M.-C., Brus, D.J. and Heuvelink, G.B.</td>
+	<td>Sampling design optimization for soil mapping with random forest</td>
+	<td>2019</td>
+	<td>Geoderma<br/>Vol. 355, pp. 113913&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2019.113913">DOI</a> <a href="https://www.sciencedirect.com/science/article/pii/S0016706119306792">URL</a>&nbsp;</td>
+</tr>
+<tr id="Wadoux2019a" class="entry">
+	<td>Wadoux, A.M.-C.</td>
+	<td>Using deep learning for multivariate mapping of soil with quantified uncertainty</td>
+	<td>2019</td>
+	<td>Geoderma<br/>Vol. 351, pp. 59-70&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geoderma.2019.05.012">DOI</a> <a href="https://www.sciencedirect.com/science/article/pii/S0016706118320743">URL</a>&nbsp;</td>
+</tr>
+<tr id="Zeraatpisheh2017" class="entry">
+	<td>Zeraatpisheh, M., Ayoubi, S., Jafari, A. and Finke, P.</td>
+	<td>Comparing the efficiency of digital and conventional soil mapping to predict soil types in a semi-arid region in Iran</td>
+	<td>2017</td>
+	<td>Geomorphology<br/>Vol. 285, pp. 186-204&nbsp;</td>
+	<td>article</td>
+	<td><a href="https://doi.org/10.1016/j.geomorph.2017.02.015">DOI</a> <a href="https://www.sciencedirect.com/science/article/pii/S0169555X16307863">URL</a>&nbsp;</td>
+</tr>
+<tr id="" class="entry">
+	<td>Zeraatpisheh, M.</td>
+	<td>Digital soil mapping, downscaling andupdating conventional soil maps using GIS,RS, Statistics and auxiliary data</td>
+	<td>2017</td>
+	<td><i>School</i>: Ghent University&nbsp;</td>
+	<td>phdthesis</td>
+	<td><a href="https://core.ac.uk/reader/91045244">URL</a>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<footer>
+ <small>Created by <a href="http://jabref.sourceforge.net">JabRef</a> on 03/09/2021.</small>
+</footer>
+
+<!-- file generated by JabRef -->
+
+</body>
+</html>
