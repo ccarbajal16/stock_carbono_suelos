@@ -18,6 +18,7 @@ Determinar geo estadísticamente la distribución del stock de carbono orgánico
 * Identificar los factores que originan y mantienen los patrones de distribución de COS.
 * Correlacionar estadísticamente la materia orgánica presente en el área de estudio con los elementos geoquímicos y de fertilidad del suelo
 
+![](img/muestreo_junin.png)
 ____________________________________
 
 <b id="f1">1</b>: Simón N, 2010. Modelación geo estadística de la distribución de carbono en el suelo en una dehesa. Escuela politécnica de Madrid, España. [↩](#a1)  <br />
