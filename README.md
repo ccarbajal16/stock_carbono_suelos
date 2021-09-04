@@ -18,6 +18,6 @@ Determinar geo estadísticamente la distribución del stock de carbono orgánico
 * Identificar los factores que originan y mantienen los patrones de distribución de COS.
 * Correlacionar estadísticamente la materia orgánica presente en el área de estudio con los elementos geoquímicos y de fertilidad del suelo
 
-<b id="f1">1</b>: Simón N, 2010. Modelación geo estadística de la distribución de carbono en el suelo en una dehesa. Escuela politécnica de Madrid, España. [↩](#a1)
-<b id="f2">2</b>: Díaz, C. 2016. Análisis estadístico de las variables geoquímicas y de fertilidad del suelo en áreas secas y húmedas para evaluar la retención de carbono en los humedales y su importancia ambiental, Bogotá, Colombia. [↩](#a2)
-<b id="f3">3</b>: Rosolen, V.; Borges De-Campos, A.; Govone, J.S.; Rocha, C. (2015). Contamination of wetland soils and floodplain sediments from agricultural activities in the Cerrado Biome (State of Minas Gerais, Brazil). [↩](#a3)
+* <b id="f1">1</b>: Simón N, 2010. Modelación geo estadística de la distribución de carbono en el suelo en una dehesa. Escuela politécnica de Madrid, España. [↩](#a1)
+* <b id="f2">2</b>: Díaz, C. 2016. Análisis estadístico de las variables geoquímicas y de fertilidad del suelo en áreas secas y húmedas para evaluar la retención de carbono en los humedales y su importancia ambiental, Bogotá, Colombia. [↩](#a2)
+* <b id="f3">3</b>: Rosolen, V.; Borges De-Campos, A.; Govone, J.S.; Rocha, C. (2015). Contamination of wetland soils and floodplain sediments from agricultural activities in the Cerrado Biome (State of Minas Gerais, Brazil). [↩](#a3)
