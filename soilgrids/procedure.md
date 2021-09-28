@@ -12,4 +12,6 @@ Existen varias opciones para acceder a los datos del Soilgrids con una resoluci�
 
 Para usar Python tenemos la siguiente opción.
 
-<b id="f1">1.</b><a href="https://soil.copernicus.org/articles/7/217/2021/">SoilGrids 2.0: producing soil information for the globe with quantified spatial uncertainty</a>
+<br>
+
+<b id="f1">1.</b><a href="https://soil.copernicus.org/articles/7/217/2021/">SoilGrids 2.0: producing soil information for the globe with quantified spatial uncertainty</a>[↩](#a1)
