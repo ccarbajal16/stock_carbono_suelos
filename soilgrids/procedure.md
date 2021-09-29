@@ -1,6 +1,8 @@
-## SoilGrids 250m empleando servicios WCS
+# SoilGrids 250m empleando servicios WCS
 
 <img src="https://www.isric.org/themes/custom/basic/logo.svg" alt="Logo ISRIC">
+
+![](images/SoilGrids_banner_web.png)
 
 Vamos a describir el procedimiento seguido para descargar capas ráster del [SoilGrids](https://www.isric.org/explore/soilgrids) (global gridded soil information), con el objetivo de contar con este grupo de datos destinado a realizar mapeo digital de suelos. En general SoilGrids produce mapas de las propiedades del suelo para todo el mundo con una resolución espacial media (tamaño de celda de 250 m) utilizando métodos de aprendizaje automático de última generación para generar los modelos necesarios. Toma como entrada las observaciones del suelo de aproximadamente 240 000 lugares en todo el mundo y más de 400 covariables ambientales globales que describen la vegetación, la morfología del terreno, el clima, la geología y la hidrología<sup id="a1">[1](#f1)</sup>. Mayor información al respecto lo pueden revisar en [https://www.isric.org/explore/soilgrids](https://www.isric.org/explore/soilgrids).
 
